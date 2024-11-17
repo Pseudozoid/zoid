@@ -2,10 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <readline/readline.h>
+#include <readline/history.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
 #define PATH_MAX 50
+#define HISTORY_FILE ".zoid_history"
 
 char cwd[PATH_MAX];
 char **get_input(char *);
@@ -15,6 +17,9 @@ int cd(char *path) {
 }
 
 int main() {
+    read_history(HISTORY_FILE);
+    stifle_history(100);
+    
     char **command;
     char *input;
     pid_t child_pid;
@@ -25,6 +30,11 @@ int main() {
       if(getcwd(cwd, sizeof(cwd)) != NULL) {
         snprintf(prompt, sizeof(prompt), "(zoid) %s ~> ", cwd);
         input = readline(prompt);
+        
+        if(strlen(input) > 0) {
+          add_history(input);
+        }
+
         command = get_input(input);
       }
 
@@ -48,17 +58,27 @@ int main() {
             continue;
         }
 
+        if (strcmp(command[0], "clrhistory") == 0) {
+          clear_history();
+          remove(HISTORY_FILE);
+
+          free(input);
+          free(command);
+          continue;
+        }
+
         child_pid = fork();
         if (child_pid == 0) {
             // never returns if the call is successful 
             execvp(command[0], command);
-            printf("Execution Error!\n");
+            printf("%s was not recognized as a valid command.\n", command[0]);
         }
 
 		else {
             waitpid(child_pid, &stat_loc, WUNTRACED);
         }
-
+        
+        write_history(HISTORY_FILE);
         free(input);
         free(command);
     }
