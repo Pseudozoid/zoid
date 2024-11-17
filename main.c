@@ -6,7 +6,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define PATH_MAX 50
+#define PATH_MAX 1024
+#define CMD_MAX 1024
 #define HISTORY_FILE ".zoid_history"
 
 char cwd[PATH_MAX];
@@ -67,22 +68,58 @@ int main() {
           continue;
         }
 
-        child_pid = fork();
-        if (child_pid == 0) {
-            // never returns if the call is successful 
-            execvp(command[0], command);
-            printf("%s was not recognized as a valid command.\n", command[0]);
+        // piping
+        int pipe_count = 0;
+        char *pipe_segment = strtok(input, "|");
+        char *pipe_commands[10];
+
+        while(pipe_segment != NULL) {
+          pipe_commands[pipe_count++] = pipe_segment;
+          pipe_segment = strtok(NULL, "|");
         }
 
-		else {
-            waitpid(child_pid, &stat_loc, WUNTRACED);
-        }
+        int pipefds[2 * (pipe_count - 1)];
         
+        for (int i = 0; i < pipe_count - 1; i++) {
+            pipe(pipefds + i * 2);  
+        }
+
+        for (int i = 0; i < pipe_count; i++) {
+            child_pid = fork();
+
+            if (child_pid == 0) {
+                char **cmd = get_input(pipe_commands[i]);
+
+                if (i > 0) {
+                    dup2(pipefds[(i - 1) * 2], STDIN_FILENO);
+                }
+
+                if (i < pipe_count - 1) {
+                    dup2(pipefds[i * 2 + 1], STDOUT_FILENO);
+                }
+
+                for (int j = 0; j < 2 * (pipe_count - 1); j++) {
+                    close(pipefds[j]);
+                }
+
+                execvp(cmd[0], cmd);
+                printf("%s was not recognized as a valid command.\n", command[0]);
+                exit(1);
+            }
+        }
+
+        for (int i = 0; i < 2 * (pipe_count - 1); i++) {
+            close(pipefds[i]);
+        }
+
+        for (int i = 0; i < pipe_count; i++) {
+            wait(&stat_loc);
+        }
+
         write_history(HISTORY_FILE);
         free(input);
         free(command);
     }
-
     return 0;
 }
 
