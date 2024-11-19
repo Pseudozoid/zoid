@@ -8,6 +8,7 @@
 
 #define PATH_MAX 50
 #define HISTORY_FILE ".zoid_history"
+#define MAX_ALIAS 100
 
 char cwd[PATH_MAX];
 char **get_input(char *);
@@ -15,11 +16,42 @@ const char *prompt_color = "\033[1;34m";
 const char *error_color = "\033[1;31m";
 const char *prompt_default = "\033[0m"; 
 
+typedef struct {
+  char *alias;
+  char *command;
+} Alias;
+
+Alias alias_table[MAX_ALIAS];
+int alias_count = 0;
+
+void set_alias(const char *alias, const char *command) {
+  if(alias_count < MAX_ALIAS) {
+    alias_table[alias_count].alias = strdup(alias);
+    alias_table[alias_count].command = strdup(command);
+    alias_count++;
+  }
+
+  else {
+    fprintf(stderr, "Max alias limit reached!\n");
+  }
+}
+
+const char *resolve_alias(const char *input) {
+  for(int i = 0; i < alias_count; i++) {
+    if(strcmp(input, alias_table[i].alias) == 0) {
+      return alias_table[i].command;
+    }
+  }
+  return input;
+}
+
 int cd(char *path) {
   return chdir(path);
 }
 
 int main() {
+    set_alias("ls", "ls --color=auto");
+
     read_history(HISTORY_FILE);
     stifle_history(100);
     
@@ -38,7 +70,21 @@ int main() {
           add_history(input);
         }
 
+        if(strlen(input) == 0) {
+          free(input);
+          continue;
+        }
+
         command = get_input(input);
+        const char *resolved_command = resolve_alias(command[0]);
+
+        if(resolved_command != command[0]) {
+          free(command[0]);
+          command[0] = strdup(resolved_command);
+        }
+        char **new_command = get_input(command[0]);
+        free(command);
+        command = new_command;
       }
 
       else {
