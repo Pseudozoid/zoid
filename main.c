@@ -11,6 +11,9 @@
 
 char cwd[PATH_MAX];
 char **get_input(char *);
+const char *prompt_color = "\033[1;34m";
+const char *error_color = "\033[1;31m";
+const char *prompt_default = "\033[0m"; 
 
 int cd(char *path) {
   return chdir(path);
@@ -28,7 +31,7 @@ int main() {
 
     while (1) {
       if(getcwd(cwd, sizeof(cwd)) != NULL) {
-        snprintf(prompt, sizeof(prompt), "(zoid) %s ~> ", cwd);
+        snprintf(prompt, sizeof(prompt), "%s(%szoid%s) %s ~> ", prompt_default, prompt_color, prompt_default, cwd);
         input = readline(prompt);
         
         if(strlen(input) > 0) {
@@ -67,11 +70,18 @@ int main() {
           continue;
         }
 
+        if (strcmp(command[0], "exit") == 0) {
+          free(input);
+          free(command);
+          exit(0);
+        }
+
         child_pid = fork();
         if (child_pid == 0) {
             // never returns if the call is successful 
             execvp(command[0], command);
-            printf("%s was not recognized as a valid command.\n", command[0]);
+            printf("%s%s was not recognized as a valid command.\n", error_color, command[0]);
+            _exit(1);
         }
 
 		else {
