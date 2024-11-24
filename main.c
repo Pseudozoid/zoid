@@ -76,7 +76,7 @@ int main() {
         }
 
         command = get_input(input);
-        const char *resolved_command = resolve_alias(command[0]);
+        /*const char *resolved_command = resolve_alias(command[0]);
 
         if(resolved_command != command[0]) {
           free(command[0]);
@@ -85,6 +85,7 @@ int main() {
         char **new_command = get_input(command[0]);
         free(command);
         command = new_command;
+        */
       }
 
       else {
@@ -102,6 +103,12 @@ int main() {
             if (cd(command[1]) < 0) {
                 perror(command[1]);
             }
+        if (command) {
+          for (int i = 0; command[i] != NULL; i++) {
+          free(command[i]);
+        }
+        free(command);
+        }
 
             /* Skip the fork */
             continue;
@@ -154,7 +161,7 @@ char **get_input(char *input) {
 			capacity *= 2;
 			command = realloc(command, capacity * sizeof(char *)); // reallocate if command has more than 8 strings
 		}
-		command[index] = parsed;
+		command[index] = strdup(parsed);
 		index++;
 
 		parsed = strtok(NULL, seperator);
