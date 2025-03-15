@@ -10,6 +10,7 @@
 #define HISTORY_FILE ".zoid_history"
 #define MAX_ALIAS 100
 
+char *HOME;
 char cwd[PATH_MAX];
 char **get_input(char *);
 const char *prompt_color = "\033[1;34m";
@@ -23,6 +24,10 @@ typedef struct {
 
 Alias alias_table[MAX_ALIAS];
 int alias_count = 0;
+
+void init_home() {
+  HOME = getenv("HOME");
+}
 
 void set_alias(const char *alias, const char *command) {
   if(alias_count < MAX_ALIAS) {
@@ -50,6 +55,7 @@ int cd(char *path) {
 }
 
 int main() {
+    init_home();
     set_alias("ls", "ls --color=auto");
 
     read_history(HISTORY_FILE);
@@ -76,16 +82,6 @@ int main() {
         }
 
         command = get_input(input);
-        /*const char *resolved_command = resolve_alias(command[0]);
-
-        if(resolved_command != command[0]) {
-          free(command[0]);
-          command[0] = strdup(resolved_command);
-        }
-        char **new_command = get_input(command[0]);
-        free(command);
-        command = new_command;
-        */
       }
 
       else {
